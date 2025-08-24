@@ -1,0 +1,239 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { COLORS } from '@/constants';
+import { useApp } from '@/hooks/useApp';
+import { useCustomAlert, CustomAlert } from '@/components/ui/CustomAlert';
+
+export function LoginForm() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp } = useApp();
+  const { alertConfig, setAlertConfig, showAlert } = useCustomAlert();
+
+  const handleAuth = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password.trim();
+    const trimmedName = name.trim();
+
+    if (!trimmedEmail || !trimmedPassword) {
+      showAlert('Erro', 'Por favor, preencha email e senha.');
+      return;
+    }
+
+    if (isSignUp && !trimmedName) {
+      showAlert('Erro', 'Por favor, preencha seu nome.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = isSignUp 
+        ? await signUp(trimmedEmail, trimmedPassword, trimmedName)
+        : await signIn(trimmedEmail, trimmedPassword);
+
+      if (!result.success) {
+        showAlert('Erro', result.error || 'Erro na autenticação');
+      } else if (isSignUp) {
+        showAlert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
+        setIsSignUp(false);
+        setName('');
+        setPassword('');
+      }
+    } catch (error) {
+      showAlert('Erro', 'Ocorreu um erro. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsSignUp(!isSignUp);
+    setName('');
+    setPassword('');
+  };
+
+  return (
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={styles.formContainer}>
+        <View style={styles.header}>
+          <MaterialIcons name="event" size={48} color={COLORS.primary} />
+          <Text style={styles.title}>Gestor de Congresso</Text>
+          <Text style={styles.subtitle}>
+            {isSignUp ? 'Criar nova conta' : 'Faça login para continuar'}
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          {isSignUp && (
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Nome Completo</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Digite seu nome completo"
+                autoCapitalize="words"
+                autoCorrect={false}
+              />
+            </View>
+          )}
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="Digite seu email"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Senha</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Digite sua senha"
+              secureTextEntry
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.authButton, loading && styles.authButtonDisabled]}
+            onPress={handleAuth}
+            disabled={loading}
+          >
+            <Text style={styles.authButtonText}>
+              {loading ? 'Processando...' : (isSignUp ? 'Criar Conta' : 'Entrar')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={toggleMode} style={styles.toggleButton}>
+            <Text style={styles.toggleText}>
+              {isSignUp 
+                ? 'Já tem uma conta? Faça login' 
+                : 'Não tem conta? Cadastre-se'
+              }
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.infoContainer}>
+            <Text style={styles.infoTitle}>Contas de Teste:</Text>
+            <Text style={styles.infoText}>
+              • Admin: admin@congresso.org / 123456
+            </Text>
+            <Text style={styles.infoText}>
+              • Voluntário: voluntario@teste.com / 123456
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <CustomAlert alertConfig={alertConfig} setAlertConfig={setAlertConfig} />
+    </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+  },
+  formContainer: {
+    margin: 24,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  form: {
+    gap: 20,
+  },
+  inputContainer: {
+    gap: 8,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: COLORS.text,
+    backgroundColor: COLORS.background,
+  },
+  authButton: {
+    backgroundColor: COLORS.primary,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  authButtonDisabled: {
+    backgroundColor: COLORS.secondary,
+  },
+  authButtonText: {
+    color: COLORS.surface,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  toggleButton: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  toggleText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  infoContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  infoText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+});
