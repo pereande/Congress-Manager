@@ -68,12 +68,22 @@ export default function TabLayout() {
             ),
           }}
         />
-        <Tabs.Screen
+                <Tabs.Screen
           name="reports"
           options={{
             title: 'Relatórios',
             tabBarIcon: ({ color, size }) => (
               <MaterialIcons name="bar-chart" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="dashboard"
+          options={{
+            title: 'Dashboard',
+            href: user?.role === 'admin' ? '/dashboard' : null,
+            tabBarIcon: ({ color, size }) => (
+              <MaterialIcons name="analytics" size={size} color={color} />
             ),
           }}
         />

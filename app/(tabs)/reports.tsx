@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS, DAYS } from '@/constants';
 import { useApp } from '@/hooks/useApp';
+import { ExportButton } from '@/components/ui/ExportButton';
 
 export default function ReportsPage() {
   const { volunteers, counts } = useApp();
@@ -43,6 +44,17 @@ export default function ReportsPage() {
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>Total Geral</Text>
             <Text style={styles.totalCount}>{totalAttendance}</Text>
+          </View>
+        </View>
+
+        {/* Export Options */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Exportar Dados</Text>
+          <View style={styles.exportButtons}>
+            <ExportButton type="volunteers" />
+            <ExportButton type="counts" />
+            <ExportButton type="sectors" />
+            <ExportButton type="full" />
           </View>
         </View>
 
@@ -302,5 +314,10 @@ const styles = StyleSheet.create({
   countTime: {
     fontSize: 12,
     color: COLORS.textSecondary,
+  },
+  exportButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
   },
 });
