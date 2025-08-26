@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '@/constants';
 import { useApp } from '@/hooks/useApp';
 import { useCustomAlert, CustomAlert } from '@/components/ui/CustomAlert';
+import { PasswordReset } from '@/components/ui/PasswordReset';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -11,10 +12,11 @@ export function LoginForm() {
   const [name, setName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
   const { signIn, signUp } = useApp();
   const { alertConfig, setAlertConfig, showAlert } = useCustomAlert();
 
-  const handleAuth = async () => {
+    const handleAuth = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
     const trimmedName = name.trim();
@@ -29,6 +31,11 @@ export function LoginForm() {
       return;
     }
 
+    if (trimmedPassword.length < 6) {
+      showAlert('Erro', 'A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+
     setLoading(true);
     try {
       const result = isSignUp 
@@ -36,15 +43,27 @@ export function LoginForm() {
         : await signIn(trimmedEmail, trimmedPassword);
 
       if (!result.success) {
-        showAlert('Erro', result.error || 'Erro na autenticação');
+        let errorMessage = result.error || 'Erro na autenticação';
+        
+        // Melhorar mensagens de erro específicas
+        if (errorMessage.includes('Invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos. Verifique seus dados.';
+        } else if (errorMessage.includes('Email not confirmed')) {
+          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
+        } else if (errorMessage.includes('User already registered')) {
+          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
+        }
+        
+        showAlert('Erro', errorMessage);
       } else if (isSignUp) {
-        showAlert('Sucesso', 'Conta criada com sucesso! Faça login para continuar.');
+        showAlert('Sucesso', 'Conta criada com sucesso! Você pode fazer login imediatamente.');
         setIsSignUp(false);
         setName('');
         setPassword('');
       }
     } catch (error) {
-      showAlert('Erro', 'Ocorreu um erro. Tente novamente.');
+      console.error('Auth error:', error);
+      showAlert('Erro', 'Ocorreu um erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -125,6 +144,17 @@ export function LoginForm() {
             </Text>
           </TouchableOpacity>
 
+          {!isSignUp && (
+            <TouchableOpacity 
+              onPress={() => setShowPasswordReset(true)} 
+              style={styles.forgotPasswordButton}
+            >
+              <Text style={styles.forgotPasswordText}>
+                Esqueceu sua senha?
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.infoContainer}>
             <Text style={styles.infoTitle}>Contas de Teste:</Text>
             <Text style={styles.infoText}>
@@ -138,6 +168,10 @@ export function LoginForm() {
       </View>
 
       <CustomAlert alertConfig={alertConfig} setAlertConfig={setAlertConfig} />
+      <PasswordReset 
+        visible={showPasswordReset} 
+        onClose={() => setShowPasswordReset(false)} 
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -235,5 +269,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     marginBottom: 2,
+  },
+  forgotPasswordButton: {
+    alignItems: 'center',
+    padding: 8,
+    marginTop: 8,
+  },
+  forgotPasswordText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
