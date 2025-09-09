@@ -309,9 +309,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Auth methods
-    const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+      const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       console.log('🔄 Attempting sign in for:', email);
+      
+      // Verificar se Supabase está configurado
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+        console.error('❌ Supabase não configurado');
+        return { 
+          success: false, 
+          error: 'Configuração do servidor não encontrada. Verifique as variáveis de ambiente no Netlify.' 
+        };
+      }
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase().trim(),
@@ -351,9 +363,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return { success: false, error: errorMessage };
     }
   };
-
   const signUp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Verificar configuração do Supabase
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+        return { 
+          success: false, 
+          error: 'Configuração do servidor não encontrada. Verifique as variáveis de ambiente no Netlify.' 
+        };
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email: email.toLowerCase().trim(),
         password,
