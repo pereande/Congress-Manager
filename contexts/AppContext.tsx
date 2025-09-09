@@ -309,23 +309,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Auth methods
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      console.log('🔄 Attempting sign in for:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.toLowerCase().trim(),
         password,
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        console.error('❌ Auth error:', error.message);
+        
+        // Traduzir erros comuns
+        let errorMessage = error.message;
+        if (errorMessage.includes('Invalid login credentials')) {
+          errorMessage = 'Email ou senha incorretos. Verifique seus dados.';
+        } else if (errorMessage.includes('Email not confirmed')) {
+          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
+        } else if (errorMessage.includes('Network request failed')) {
+          errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        }
+        
+        return { success: false, error: errorMessage };
       }
 
+      console.log('✅ Sign in successful');
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
-      };
+      console.error('❌ Network error during sign in:', error);
+      
+      let errorMessage = 'Erro de conexão';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
+          errorMessage = 'Erro de conexão com o servidor. Verifique sua internet e tente novamente.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 

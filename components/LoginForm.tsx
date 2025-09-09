@@ -5,6 +5,7 @@ import { COLORS } from '@/constants';
 import { useApp } from '@/hooks/useApp';
 import { useCustomAlert, CustomAlert } from '@/components/ui/CustomAlert';
 import { PasswordReset } from '@/components/ui/PasswordReset';
+import { ConnectionStatus } from '@/components/ui/ConnectionStatus';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -16,7 +17,7 @@ export function LoginForm() {
   const { signIn, signUp } = useApp();
   const { alertConfig, setAlertConfig, showAlert } = useCustomAlert();
 
-    const handleAuth = async () => {
+        const handleAuth = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
     const trimmedName = name.trim();
@@ -37,33 +38,37 @@ export function LoginForm() {
     }
 
     setLoading(true);
+    
     try {
+      console.log('🔄 Starting authentication process...');
+      
       const result = isSignUp 
         ? await signUp(trimmedEmail, trimmedPassword, trimmedName)
         : await signIn(trimmedEmail, trimmedPassword);
 
       if (!result.success) {
-        let errorMessage = result.error || 'Erro na autenticação';
-        
-        // Melhorar mensagens de erro específicas
-        if (errorMessage.includes('Invalid login credentials')) {
-          errorMessage = 'Email ou senha incorretos. Verifique seus dados.';
-        } else if (errorMessage.includes('Email not confirmed')) {
-          errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
-        } else if (errorMessage.includes('User already registered')) {
-          errorMessage = 'Este email já está cadastrado. Tente fazer login.';
-        }
-        
-        showAlert('Erro', errorMessage);
+        console.error('❌ Authentication failed:', result.error);
+        showAlert('Erro de Autenticação', result.error || 'Erro na autenticação');
       } else if (isSignUp) {
+        console.log('✅ Sign up successful');
         showAlert('Sucesso', 'Conta criada com sucesso! Você pode fazer login imediatamente.');
         setIsSignUp(false);
         setName('');
         setPassword('');
+      } else {
+        console.log('✅ Sign in successful');
       }
     } catch (error) {
-      console.error('Auth error:', error);
-      showAlert('Erro', 'Ocorreu um erro de conexão. Verifique sua internet e tente novamente.');
+      console.error('❌ Unexpected auth error:', error);
+      
+      let errorMessage = 'Erro de conexão desconhecido';
+      if (error instanceof Error) {
+        errorMessage = error.message.includes('fetch') 
+          ? 'Erro de conexão com o servidor. Verifique sua internet.'
+          : error.message;
+      }
+      
+      showAlert('Erro de Conexão', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -154,6 +159,8 @@ export function LoginForm() {
               </Text>
             </TouchableOpacity>
           )}
+
+          <ConnectionStatus />
 
           <View style={styles.infoContainer}>
             <Text style={styles.infoTitle}>Contas de Teste:</Text>

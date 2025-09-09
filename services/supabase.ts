@@ -4,6 +4,18 @@ import { AppState } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Verificar se as variáveis de ambiente estão definidas
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Supabase configuration missing:');
+  console.error('EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✓ Configured' : '❌ Missing');
+  console.error('EXPO_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey ? '✓ Configured' : '❌ Missing');
+  throw new Error('Supabase configuration is incomplete. Please check your environment variables.');
+}
+
+console.log('✅ Supabase configuration loaded');
+console.log('URL:', supabaseUrl);
+console.log('Key:', supabaseAnonKey.substring(0, 20) + '...');
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
@@ -11,6 +23,22 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false,
     flowType: 'pkce',
   },
+  global: {
+    headers: {
+      'x-application-name': 'gestor-congresso',
+    },
+  },
+});
+
+// Test connection
+supabase.auth.getSession().then(({ data, error }) => {
+  if (error) {
+    console.error('❌ Supabase connection test failed:', error.message);
+  } else {
+    console.log('✅ Supabase connection test successful');
+  }
+}).catch(err => {
+  console.error('❌ Network error during Supabase connection test:', err);
 });
 
 // Handle app state changes for auth
