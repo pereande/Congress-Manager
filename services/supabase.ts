@@ -4,34 +4,29 @@ import { AppState } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Log configuration status (não bloquear compilação)
+// Log configuration status sem bloquear compilação
 console.log('🔧 Supabase configuration status:');
 console.log('URL:', supabaseUrl ? '✓ Configured' : '❌ Missing');
 console.log('Key:', supabaseAnonKey ? '✓ Configured' : '❌ Missing');
 
-if (supabaseUrl && supabaseAnonKey) {
-  console.log('✅ Supabase ready');
-  console.log('URL:', supabaseUrl);
-  console.log('Key:', supabaseAnonKey.substring(0, 20) + '...');
-} else {
-  console.warn('⚠️  Supabase não configurado - usando valores padrão para desenvolvimento');
-}
+// Usar valores padrão para permitir compilação
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
   supabaseAnonKey || 'placeholder-key', 
   {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: false,
-    flowType: 'pkce',
-  },
-  global: {
-    headers: {
-      'x-application-name': 'gestor-congresso',
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,
+      flowType: 'pkce',
     },
-  },
-});
+    global: {
+      headers: {
+        'x-application-name': 'gestor-congresso',
+      },
+    },
+  }
+);
 
 // Test connection apenas se configurado corretamente
 if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supabase.co') {

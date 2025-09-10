@@ -15,6 +15,7 @@ interface AppContextType extends AppState {
   updateUserPermission: (userId: string, canCount: boolean) => Promise<void>;
   sendAlert: (message: string) => Promise<void>;
   refreshData: () => Promise<void>;
+  dismissAlert: (alertId: string) => void;
 }
 
 export const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -30,7 +31,8 @@ type AppAction =
   | { type: 'ADD_VOLUNTEER'; payload: Volunteer }
   | { type: 'UPDATE_SECTOR'; payload: { id: string; updates: Partial<Sector> } }
   | { type: 'ADD_COUNT'; payload: CountEntry }
-  | { type: 'ADD_ALERT'; payload: Alert };
+  | { type: 'ADD_ALERT'; payload: Alert }
+  | { type: 'DISMISS_ALERT'; payload: string };
 
 const initialState: AppState & { session: Session | null; loading: boolean } = {
   session: null,
@@ -76,6 +78,11 @@ function appReducer(
       return { ...state, counts: [...state.counts, action.payload] };
     case 'ADD_ALERT':
       return { ...state, alerts: [action.payload, ...state.alerts] };
+    case 'DISMISS_ALERT':
+      return { 
+        ...state, 
+        alerts: state.alerts.filter(alert => alert.id !== action.payload) 
+      };
     default:
       return state;
   }
@@ -308,8 +315,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  // Auth methods
-      const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  // Auth methods com tratamento robusto de erros
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       console.log('🔄 Attempting sign in for:', email);
       
@@ -363,6 +370,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return { success: false, error: errorMessage };
     }
   };
+
   const signUp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
     try {
       // Verificar configuração do Supabase
@@ -523,6 +531,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const dismissAlert = (alertId: string): void => {
+    dispatch({ type: 'DISMISS_ALERT', payload: alertId });
+  };
+
   const value: AppContextType = {
     ...state,
     signIn,
@@ -534,6 +546,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateUserPermission,
     sendAlert,
     refreshData,
+    dismissAlert,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

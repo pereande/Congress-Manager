@@ -23,8 +23,12 @@ export function PasswordReset({ visible, onClose }: PasswordResetProps) {
 
     setLoading(true);
     try {
+            const redirectUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}/reset-password`
+        : 'https://indicadorproject01.netlify.app/reset-password';
+        
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: redirectUrl,
       });
 
       if (error) {
