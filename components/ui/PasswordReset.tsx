@@ -23,22 +23,29 @@ export function PasswordReset({ visible, onClose }: PasswordResetProps) {
 
     setLoading(true);
     try {
-            const redirectUrl = typeof window !== 'undefined' 
+      // Detectar URL automaticamente
+      const redirectUrl = typeof window !== 'undefined' 
         ? `${window.location.origin}/reset-password`
         : 'https://indicadorproject01.netlify.app/reset-password';
+        
+      console.log('🔄 Enviando email de reset para:', email.trim());
+      console.log('🔗 URL de redirecionamento:', redirectUrl);
         
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
         redirectTo: redirectUrl,
       });
 
       if (error) {
+        console.error('❌ Erro no reset:', error.message);
         showAlert('Erro', 'Erro ao enviar email de recuperação. Verifique se o email está correto.');
       } else {
+        console.log('✅ Email de reset enviado com sucesso');
         showAlert('Sucesso', 'Email de recuperação enviado! Verifique sua caixa de entrada.');
         setEmail('');
         onClose();
       }
     } catch (error) {
+      console.error('❌ Erro de rede no reset:', error);
       showAlert('Erro', 'Erro de conexão. Tente novamente.');
     } finally {
       setLoading(false);

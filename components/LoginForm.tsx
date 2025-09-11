@@ -17,7 +17,7 @@ export function LoginForm() {
   const { signIn, signUp } = useApp();
   const { alertConfig, setAlertConfig, showAlert } = useCustomAlert();
 
-        const handleAuth = async () => {
+  const handleAuth = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
     const trimmedName = name.trim();

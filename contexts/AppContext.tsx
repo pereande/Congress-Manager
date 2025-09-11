@@ -395,7 +395,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        return { success: false, error: error.message };
+        // Traduzir erros comuns do signup
+        let errorMessage = error.message;
+        if (errorMessage.includes('User already registered')) {
+          errorMessage = 'Email já cadastrado. Tente fazer login ou recuperar sua senha.';
+        } else if (errorMessage.includes('Password should be at least 6 characters')) {
+          errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+        } else if (errorMessage.includes('Invalid email')) {
+          errorMessage = 'Email inválido. Verifique o formato do email.';
+        }
+        
+        return { success: false, error: errorMessage };
       }
 
       return { success: true };
