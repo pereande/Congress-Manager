@@ -21,9 +21,18 @@ export function PasswordReset({ visible, onClose }: PasswordResetProps) {
       return;
     }
 
+    // Check if Supabase is properly configured
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+      showAlert('Erro', 'Configuração do servidor não encontrada. Contacte o administrador.');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Detectar URL automaticamente
+      // Automatically detect production vs development URL
       const redirectUrl = typeof window !== 'undefined' 
         ? `${window.location.origin}/reset-password`
         : 'https://indicadorproject01.netlify.app/reset-password';
@@ -37,7 +46,16 @@ export function PasswordReset({ visible, onClose }: PasswordResetProps) {
 
       if (error) {
         console.error('❌ Erro no reset:', error.message);
-        showAlert('Erro', 'Erro ao enviar email de recuperação. Verifique se o email está correto.');
+        
+        // Translate common errors
+        let errorMessage = error.message;
+        if (errorMessage.includes('User not found')) {
+          errorMessage = 'Email não encontrado. Verifique se está correto.';
+        } else if (errorMessage.includes('Email rate limit exceeded')) {
+          errorMessage = 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.';
+        }
+        
+        showAlert('Erro', errorMessage);
       } else {
         console.log('✅ Email de reset enviado com sucesso');
         showAlert('Sucesso', 'Email de recuperação enviado! Verifique sua caixa de entrada.');
@@ -46,7 +64,7 @@ export function PasswordReset({ visible, onClose }: PasswordResetProps) {
       }
     } catch (error) {
       console.error('❌ Erro de rede no reset:', error);
-      showAlert('Erro', 'Erro de conexão. Tente novamente.');
+      showAlert('Erro', 'Erro de conexão. Verifique sua internet e tente novamente.');
     } finally {
       setLoading(false);
     }

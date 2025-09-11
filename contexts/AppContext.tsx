@@ -135,8 +135,21 @@ const transformAlert = (alert: AlertData): Alert => ({
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Check if Supabase is properly configured
+  const isSupabaseConfigured = () => {
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    return supabaseUrl && supabaseKey && supabaseUrl !== 'https://placeholder.supabase.co';
+  };
+
   // Initialize auth session
   useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase not configured, skipping auth initialization');
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       dispatch({ type: 'SET_SESSION', payload: session });
       if (session?.user) {
@@ -161,13 +174,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Load initial data when user is authenticated
   useEffect(() => {
-    if (state.user) {
+    if (state.user && isSupabaseConfigured()) {
       loadAllData();
       setupRealTimeSubscriptions();
     }
   }, [state.user]);
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
+    if (!isSupabaseConfigured()) return;
+
     try {
       const { data: profile, error } = await supabase
         .from('user_profiles')
@@ -189,6 +204,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const loadAllData = async () => {
+    if (!isSupabaseConfigured()) return;
+
     try {
       const [volunteersResult, sectorsResult, countsResult, alertsResult] = await Promise.all([
         supabase.from('volunteers').select('*').order('created_at', { ascending: false }),
@@ -230,6 +247,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const setupRealTimeSubscriptions = () => {
+    if (!isSupabaseConfigured()) return;
+
     // Subscribe to volunteers changes
     const volunteersSubscription = supabase
       .channel('volunteers_changes')
@@ -315,20 +334,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  // Auth methods com tratamento robusto de erros
+  // Auth methods with robust error handling
   const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       console.log('🔄 Attempting sign in for:', email);
       
-      // Verificar se Supabase está configurado
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+      // Check if Supabase is configured
+      if (!isSupabaseConfigured()) {
         console.error('❌ Supabase não configurado');
         return { 
           success: false, 
-          error: 'Configuração do servidor não encontrada. Verifique as variáveis de ambiente no Netlify.' 
+          error: 'Configuração do servidor não encontrada. Verifique as variáveis de ambiente.' 
         };
       }
       
@@ -340,7 +356,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error) {
         console.error('❌ Auth error:', error.message);
         
-        // Traduzir erros comuns
+        // Translate common errors
         let errorMessage = error.message;
         if (errorMessage.includes('Invalid login credentials')) {
           errorMessage = 'Email ou senha incorretos. Verifique seus dados.';
@@ -373,14 +389,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      // Verificar configuração do Supabase
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://placeholder.supabase.co') {
+      // Check configuration
+      if (!isSupabaseConfigured()) {
         return { 
           success: false, 
-          error: 'Configuração do servidor não encontrada. Verifique as variáveis de ambiente no Netlify.' 
+          error: 'Configuração do servidor não encontrada. Verifique as variáveis de ambiente.' 
         };
       }
       
@@ -395,7 +408,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        // Traduzir erros comuns do signup
+        // Translate common signup errors
         let errorMessage = error.message;
         if (errorMessage.includes('User already registered')) {
           errorMessage = 'Email já cadastrado. Tente fazer login ou recuperar sua senha.';
@@ -418,6 +431,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async (): Promise<void> => {
+    if (!isSupabaseConfigured()) return;
+
     try {
       await supabase.auth.signOut();
     } catch (error) {
@@ -427,7 +442,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Data methods
   const registerVolunteer = async (volunteerData: Omit<Volunteer, 'id' | 'userId' | 'createdAt'>): Promise<void> => {
-    if (!state.user) throw new Error('User not authenticated');
+    if (!state.user || !isSupabaseConfigured()) throw new Error('User not authenticated or Supabase not configured');
 
     try {
       const { error } = await supabase
@@ -449,6 +464,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSector = async (sectorId: string, updates: Partial<Sector>): Promise<void> => {
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+
     try {
       const updateData: any = {
         updated_at: new Date().toISOString(),
@@ -477,7 +494,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const submitCount = async (day: 'friday' | 'saturday' | 'sunday', count: number): Promise<void> => {
-    if (!state.user) throw new Error('User not authenticated');
+    if (!state.user || !isSupabaseConfigured()) throw new Error('User not authenticated or Supabase not configured');
 
     try {
       const { error } = await supabase
@@ -497,6 +514,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUserPermission = async (userId: string, canCount: boolean): Promise<void> => {
+    if (!isSupabaseConfigured()) throw new Error('Supabase not configured');
+
     try {
       const { error } = await supabase
         .from('user_profiles')
@@ -517,7 +536,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const sendAlert = async (message: string): Promise<void> => {
-    if (!state.user) throw new Error('User not authenticated');
+    if (!state.user || !isSupabaseConfigured()) throw new Error('User not authenticated or Supabase not configured');
 
     try {
       const { error } = await supabase
@@ -536,7 +555,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshData = async (): Promise<void> => {
-    if (state.user) {
+    if (state.user && isSupabaseConfigured()) {
       await loadAllData();
     }
   };

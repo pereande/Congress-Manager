@@ -4,12 +4,12 @@ import { AppState } from 'react-native';
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
-// Log configuration status sem bloquear compilação
-console.log('🔧 Supabase configuration status:');
-console.log('URL:', supabaseUrl ? '✓ Configured' : '❌ Missing');
-console.log('Key:', supabaseAnonKey ? '✓ Configured' : '❌ Missing');
+// Log configuration status for debugging
+console.log('🔧 Supabase Configuration Status:');
+console.log('URL:', supabaseUrl ? '✅ Configured' : '❌ Missing');
+console.log('Key:', supabaseAnonKey ? '✅ Configured' : '❌ Missing');
 
-// Usar valores padrão para permitir compilação
+// Create client with fallback values to prevent compilation errors
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co', 
   supabaseAnonKey || 'placeholder-key', 
@@ -28,7 +28,7 @@ export const supabase = createClient(
   }
 );
 
-// Test connection apenas se configurado corretamente
+// Test connection only if properly configured
 if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supabase.co') {
   supabase.auth.getSession().then(({ data, error }) => {
     if (error) {
@@ -40,7 +40,7 @@ if (supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://placeholder.supab
     console.error('❌ Network error during Supabase connection test:', err);
   });
 } else {
-  console.warn('⚠️  Supabase connection test skipped - configuration missing');
+  console.warn('⚠️  Supabase connection test skipped - configuration incomplete');
 }
 
 // Handle app state changes for auth
