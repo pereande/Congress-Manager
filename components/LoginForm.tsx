@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { COLORS } from '@/constants';
@@ -16,6 +16,7 @@ export function LoginForm() {
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const { signIn, signUp } = useApp();
   const { alertConfig, setAlertConfig, showAlert } = useCustomAlert();
+  const captchaRef = useRef(null);
 
   const handleAuth = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -42,13 +43,29 @@ export function LoginForm() {
     try {
       console.log('🔄 Starting authentication process...');
       
+      // Prepare captcha token if available
+      let captchaToken = null;
+      if (captchaRef.current) {
+        try {
+          captchaToken = await captchaRef.current.executeAsync();
+        } catch (captchaError) {
+          console.log('ℹ️ Captcha not required or failed:', captchaError.message);
+        }
+      }
+
       const result = isSignUp 
-        ? await signUp(trimmedEmail, trimmedPassword, trimmedName)
-        : await signIn(trimmedEmail, trimmedPassword);
+        ? await signUp(trimmedEmail, trimmedPassword, trimmedName, captchaToken)
+        : await signIn(trimmedEmail, trimmedPassword, captchaToken);
 
       if (!result.success) {
         console.error('❌ Authentication failed:', result.error);
-        showAlert('Erro de Autenticação', result.error || 'Erro na autenticação');
+        
+        // Handle captcha-specific errors
+        if (result.error?.includes('captcha')) {
+          showAlert('Verificação Necessária', 'Por favor, complete a verificação de segurança e tente novamente.');
+        } else {
+          showAlert('Erro de Autenticação', result.error || 'Erro na autenticação');
+        }
       } else if (isSignUp) {
         console.log('✅ Sign up successful');
         showAlert('Sucesso', 'Conta criada com sucesso! Você pode fazer login imediatamente.');
@@ -63,9 +80,13 @@ export function LoginForm() {
       
       let errorMessage = 'Erro de conexão desconhecido';
       if (error instanceof Error) {
-        errorMessage = error.message.includes('fetch') 
-          ? 'Erro de conexão com o servidor. Verifique sua internet.'
-          : error.message;
+        if (error.message.includes('captcha')) {
+          errorMessage = 'Verificação de segurança necessária. Tente novamente.';
+        } else if (error.message.includes('fetch') || error.message.includes('Network')) {
+          errorMessage = 'Erro de conexão com o servidor. Verifique sua internet.';
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       showAlert('Erro de Conexão', errorMessage);
@@ -169,6 +190,13 @@ export function LoginForm() {
             </Text>
             <Text style={styles.infoText}>
               • Voluntário: voluntario@teste.com / 123456
+            </Text>
+          </View>
+
+          <View style={styles.captchaInfo}>
+            <MaterialIcons name="security" size={16} color={COLORS.textSecondary} />
+            <Text style={styles.captchaText}>
+              Protegido por verificação de segurança
             </Text>
           </View>
         </View>
@@ -286,5 +314,18 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontSize: 14,
     fontWeight: '500',
+  },
+  captchaInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  captchaText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
 });

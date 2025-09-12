@@ -6,8 +6,8 @@ import { User, Volunteer, Sector, CountEntry, Alert, AppState } from '@/types';
 interface AppContextType extends AppState {
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, name: string, captchaToken?: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   registerVolunteer: (volunteer: Omit<Volunteer, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   updateSector: (sectorId: string, updates: Partial<Sector>) => Promise<void>;
@@ -334,8 +334,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  // Auth methods with robust error handling
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  // Auth methods with captcha support and robust error handling
+  const signIn = async (email: string, password: string, captchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     try {
       console.log('🔄 Attempting sign in for:', email);
       
@@ -348,15 +348,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       }
       
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Prepare auth options with captcha token if provided
+      const authOptions: any = {
         email: email.toLowerCase().trim(),
         password,
-      });
+      };
+
+      if (captchaToken) {
+        authOptions.options = {
+          captchaToken,
+        };
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword(authOptions);
 
       if (error) {
         console.error('❌ Auth error:', error.message);
         
-        // Translate common errors
+        // Translate common errors including captcha
         let errorMessage = error.message;
         if (errorMessage.includes('Invalid login credentials')) {
           errorMessage = 'Email ou senha incorretos. Verifique seus dados.';
@@ -364,6 +373,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           errorMessage = 'Email não confirmado. Verifique sua caixa de entrada.';
         } else if (errorMessage.includes('Network request failed')) {
           errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+        } else if (errorMessage.includes('captcha')) {
+          errorMessage = 'Verificação de segurança falhou. Tente novamente.';
         }
         
         return { success: false, error: errorMessage };
@@ -378,6 +389,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error instanceof Error) {
         if (error.message.includes('Failed to fetch') || error.message.includes('Network request failed')) {
           errorMessage = 'Erro de conexão com o servidor. Verifique sua internet e tente novamente.';
+        } else if (error.message.includes('captcha')) {
+          errorMessage = 'Verificação de segurança necessária. Tente novamente.';
         } else {
           errorMessage = error.message;
         }
@@ -387,7 +400,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string): Promise<{ success: boolean; error?: string }> => {
+  const signUp = async (email: string, password: string, name: string, captchaToken?: string): Promise<{ success: boolean; error?: string }> => {
     try {
       // Check configuration
       if (!isSupabaseConfigured()) {
@@ -397,7 +410,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
       }
       
-      const { data, error } = await supabase.auth.signUp({
+      // Prepare signup options with captcha token if provided
+      const signUpOptions: any = {
         email: email.toLowerCase().trim(),
         password,
         options: {
@@ -405,10 +419,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
             name: name.trim(),
           },
         },
-      });
+      };
+
+      if (captchaToken) {
+        signUpOptions.options.captchaToken = captchaToken;
+      }
+
+      const { data, error } = await supabase.auth.signUp(signUpOptions);
 
       if (error) {
-        // Translate common signup errors
+        // Translate common signup errors including captcha
         let errorMessage = error.message;
         if (errorMessage.includes('User already registered')) {
           errorMessage = 'Email já cadastrado. Tente fazer login ou recuperar sua senha.';
@@ -416,6 +436,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
         } else if (errorMessage.includes('Invalid email')) {
           errorMessage = 'Email inválido. Verifique o formato do email.';
+        } else if (errorMessage.includes('captcha')) {
+          errorMessage = 'Verificação de segurança falhou. Tente novamente.';
         }
         
         return { success: false, error: errorMessage };
@@ -423,10 +445,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
-      };
+      let errorMessage = 'Erro desconhecido';
+      if (error instanceof Error) {
+        if (error.message.includes('captcha')) {
+          errorMessage = 'Verificação de segurança necessária. Tente novamente.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      return { success: false, error: errorMessage };
     }
   };
 
